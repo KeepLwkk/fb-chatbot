@@ -56,7 +56,8 @@ app.post('/webhook', async (req, res) => {
                 console.log(`Mensahi mula sa user (${senderId}):`, userMessage);
 
                 // Dito tinatawag ang Gemini API
-                const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
+                // Palitan ang line na ito sa loob ng iyong app.post:
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
                 const result = await model.generateContent(`Ikaw si Alexa, assistant ng Lapida HUB. Sagutin ito: ${userMessage}`);
                 const aiResponse = result.response.text();
 
