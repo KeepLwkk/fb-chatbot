@@ -37,7 +37,7 @@ app.post('/webhook', async (req, res) => {
                 const userMessage = messaging.message.text;
 
                 // Gamitin ang 'gemini-1.5-flash' (Ito ang standard na pangalan)
-                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
                 
                 const result = await model.generateContent(`Ikaw si Alexa, assistant ng Lapida HUB. Sagutin ito: ${userMessage}`);
                 const aiResponse = result.response.text();
