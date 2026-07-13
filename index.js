@@ -5,12 +5,12 @@ const axios = require('axios');
 const app = express();
 app.use(express.json());
 
-// DEBUGGING: I-check kung may API Key
+// DEBUGGING: I-check kung may API Key (Gumamit ng .trim() para tanggalin ang hidden spaces)
+const apiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : "";
 console.log("--- STARTUP CHECK ---");
-console.log("GEMINI_API_KEY set:", process.env.GEMINI_API_KEY ? "YES" : "NO");
-console.log("PAGE_ACCESS_TOKEN set:", process.env.PAGE_ACCESS_TOKEN ? "YES" : "NO");
+console.log("GEMINI_API_KEY is set and clean:", apiKey !== "");
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "dummy_key");
+const genAI = new GoogleGenerativeAI(apiKey);
 
 app.get('/webhook', (req, res) => {
     const mode = req.query['hub.mode'];
@@ -32,12 +32,11 @@ app.post('/webhook', async (req, res) => {
             const messaging = entry.messaging[0];
             const senderId = messaging.sender.id;
             
-            // Siguraduhin na may message text bago mag-process
             if (messaging.message && messaging.message.text) {
                 const userMessage = messaging.message.text;
 
-                // Gamitin ang 'gemini-1.5-flash' (Ito ang standard na pangalan)
-                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-8b" });
+                // Gamitin ang main version na 'gemini-1.5-flash'
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
                 
                 const result = await model.generateContent(`Ikaw si Alexa, assistant ng Lapida HUB. Sagutin ito: ${userMessage}`);
                 const aiResponse = result.response.text();
@@ -52,8 +51,8 @@ app.post('/webhook', async (req, res) => {
         }
         res.status(200).send('EVENT_RECEIVED');
     } catch (error) {
-        // I-print ang kumpletong error para makita natin kung bakit 404
-        console.error('Error sa POST webhook:', error.response ? error.response.data : error.message);
+        // I-print ang buong error object para makita ang API detail
+        console.error('Error sa POST webhook:', error.message);
         res.status(200).send('EVENT_RECEIVED');
     }
 });
