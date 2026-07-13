@@ -5,29 +5,24 @@ const axios = require('axios');
 const app = express();
 app.use(express.json());
 
-// Log para makita natin kung may pumapasok na request sa Render Logs
-app.use((req, res, next) => {
-    console.log(`${req.method} request received at ${req.url}`);
-    next();
-});
+// DEBUGGING: I-check kung may API Key
+console.log("--- STARTUP CHECK ---");
+console.log("GEMINI_API_KEY set:", process.env.GEMINI_API_KEY ? "YES" : "NO");
+console.log("PAGE_ACCESS_TOKEN set:", process.env.PAGE_ACCESS_TOKEN ? "YES" : "NO");
 
-// 1. VERIFICATION
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "dummy_key");
+
 app.get('/webhook', (req, res) => {
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
 
     if (mode === 'subscribe' && token === 'alexa_secret_code') {
-        console.log('Webhook verified successfully!');
         res.status(200).send(challenge);
     } else {
-        console.log('Webhook verification failed.');
         res.sendStatus(403);
     }
 });
-
-// 2. CHATBOT LOGIC
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.post('/webhook', async (req, res) => {
     try {
@@ -36,27 +31,33 @@ app.post('/webhook', async (req, res) => {
         if (entry && entry.messaging) {
             const messaging = entry.messaging[0];
             const senderId = messaging.sender.id;
-            const userMessage = messaging.message.text;
+            
+            // Siguraduhin na may message text bago mag-process
+            if (messaging.message && messaging.message.text) {
+                const userMessage = messaging.message.text;
 
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-8b" });
-            const result = await model.generateContent(`Ikaw si Alexa, assistant ng Lapida HUB. Sagutin ito: ${userMessage}`);
-            const aiResponse = await result.response.text();
+                // Gamitin ang 'gemini-1.5-flash' (Ito ang standard na pangalan)
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                
+                const result = await model.generateContent(`Ikaw si Alexa, assistant ng Lapida HUB. Sagutin ito: ${userMessage}`);
+                const aiResponse = result.response.text();
 
-            await axios.post(`https://graph.facebook.com/v25.0/me/messages`, {
-                recipient: { id: senderId },
-                message: { text: aiResponse }
-            }, {
-                params: { access_token: process.env.PAGE_ACCESS_TOKEN }
-            });
+                await axios.post(`https://graph.facebook.com/v25.0/me/messages`, {
+                    recipient: { id: senderId },
+                    message: { text: aiResponse }
+                }, {
+                    params: { access_token: process.env.PAGE_ACCESS_TOKEN }
+                });
+            }
         }
         res.status(200).send('EVENT_RECEIVED');
     } catch (error) {
-        console.error('Error sa POST webhook:', error.message);
+        // I-print ang kumpletong error para makita natin kung bakit 404
+        console.error('Error sa POST webhook:', error.response ? error.response.data : error.message);
         res.status(200).send('EVENT_RECEIVED');
     }
 });
 
-// 3. START SERVER (Naka-bind sa 0.0.0.0 para sa Render)
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Bot is running on port ${PORT}`);
