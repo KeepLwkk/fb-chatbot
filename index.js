@@ -5,13 +5,13 @@ const axios = require('axios');
 const app = express();
 app.use(express.json());
 
-// Setup ng OpenAI client para sa OpenRouter
+// Setup para sa GitHub Models
 const client = new OpenAI({
-  baseURL: 'https://openrouter.ai/api/v1',
-  apiKey: process.env.OPENAI_API_KEY, 
+  baseURL: 'https://models.inference.ai.azure.com',
+  apiKey: process.env.OPENAI_API_KEY, // Ilagay dito ang iyong GitHub token
 });
 
-// 1. WEBHOOK VERIFICATION (Para sa Facebook)
+// 1. WEBHOOK VERIFICATION
 app.get('/webhook', (req, res) => {
     const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
     const mode = req.query['hub.mode'];
@@ -19,7 +19,6 @@ app.get('/webhook', (req, res) => {
     const challenge = req.query['hub.challenge'];
 
     if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-        console.log('WEBHOOK_VERIFIED');
         res.status(200).send(challenge);
     } else {
         res.sendStatus(403);
@@ -38,18 +37,18 @@ app.post('/webhook', async (req, res) => {
             if (messaging.message && messaging.message.text) {
                 const userMessage = messaging.message.text;
 
-                // Simple API call para maiwasan ang 400 Bad Request
+                // Gamitin ang tamang model name mula sa GitHub Models
                 const apiResponse = await client.chat.completions.create({
-                    model: 'google/gemma-4-26b-a4b-it:free',
+                    model: 'gpt-4o-mini', 
                     messages: [
                         { role: 'system', content: 'Ikaw si Alexa, assistant ng Lapida HUB.' },
                         { role: 'user', content: userMessage }
-                    ]
+                    ],
+                    temperature: 0.7
                 });
 
                 const aiResponse = apiResponse.choices[0].message.content;
 
-                // Send back to Messenger
                 await axios.post(`https://graph.facebook.com/v25.0/me/messages`, {
                     recipient: { id: senderId },
                     message: { text: aiResponse }
@@ -60,12 +59,10 @@ app.post('/webhook', async (req, res) => {
         }
         res.status(200).send('EVENT_RECEIVED');
     } catch (error) {
-        console.error('Webhook Error Details:', error.response ? error.response.data : error.message);
+        console.error('Error:', error.response ? error.response.data : error.message);
         res.status(200).send('EVENT_RECEIVED');
     }
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Bot is running on port ${PORT}`);
-});
+app.listen(PORT, '0.0.0.0', () => console.log(`Bot running on port ${PORT}`));
