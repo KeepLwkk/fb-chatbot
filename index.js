@@ -2,10 +2,11 @@ const express = require('express');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const axios = require('axios');
 
+// 1. DITO DAPAT UNA ANG EXPRESS APP DEFINITION
 const app = express();
 app.use(express.json());
 
-// Verification
+// 2. SUNOD ANG MGA ROUTES
 app.get('/webhook', (req, res) => {
     if (req.query['hub.mode'] === 'subscribe' && req.query['hub.verify_token'] === 'alexa_secret_code') {
         res.status(200).send(req.query['hub.challenge']);
@@ -14,7 +15,6 @@ app.get('/webhook', (req, res) => {
     }
 });
 
-// Chatbot Logic
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.post('/webhook', async (req, res) => {
@@ -43,4 +43,5 @@ app.post('/webhook', async (req, res) => {
     }
 });
 
+// 3. HULI ANG LISTENING
 app.listen(process.env.PORT || 3000, () => console.log('Bot is running'));
