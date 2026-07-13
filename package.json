@@ -1,8 +1,13 @@
 {
+  "name": "fb-chatbot",
+  "version": "1.0.0",
+  "main": "index.js",
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
-    "axios": "^1.18.1",
-    "body-parser": "^2.3.0",
-    "express": "^5.2.1"
+    "express": "^4.17.1",
+    "@google/generative-ai": "^0.21.0",
+    "axios": "^1.6.0"
+  },
+  "scripts": {
+    "start": "node index.js"
   }
 }
