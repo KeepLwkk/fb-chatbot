@@ -1,48 +1,12 @@
-const express = require('express');
-const { OpenAI } = require('openai');
-const axios = require('axios');
-const mongoose = require('mongoose');
-
-const app = express();
-app.use(express.json());
-
-// 1. Koneksyon sa MongoDB
-mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log('Connected to MongoDB'))
-    .catch(err => console.error('MongoDB Connection Error:', err));
-
-const ChatSchema = new mongoose.Schema({
-    senderId: String,
-    mode: { type: String, default: 'ai' },
-    messages: [{
-        role: { type: String, required: true },
-        content: { type: String, required: true }
-    }]
-});
-const Chat = mongoose.model('Chat', ChatSchema);
-
-const client = new OpenAI({
-    baseURL: 'https://models.inference.ai.azure.com',
-    apiKey: process.env.OPENAI_API_KEY,
-});
-
-app.get('/webhook', (req, res) => {
-    if (req.query['hub.verify_token'] === process.env.VERIFY_TOKEN) {
-        return res.status(200).send(req.query['hub.challenge']);
-    }
-    res.sendStatus(403);
-});
-
 app.post('/webhook', async (req, res) => {
     try {
         const messaging = req.body.entry[0].messaging[0];
         
-        // DITO ANG FIX: Tinutukoy natin kung sino ang customer
         const isFromPage = messaging.sender.id === process.env.PAGE_ID;
         const targetId = isFromPage ? messaging.recipient.id : messaging.sender.id;
         const userMessage = messaging.message.text || "";
 
-        // --- COMMAND LOGIC (Dito natin ginagamit ang targetId) ---
+        // --- COMMAND LOGIC ---
         if (userMessage === '!admin') {
             await Chat.updateOne({ senderId: targetId }, { mode: 'human' }, { upsert: true });
             return res.status(200).send('EVENT_RECEIVED');
@@ -53,24 +17,27 @@ app.post('/webhook', async (req, res) => {
             return res.status(200).send('EVENT_RECEIVED');
         }
 
-        // Kung galing sa Page (ikaw), huwag na ituloy ang AI logic
+        // Kung ikaw ang nag-message, huwag na ituloy sa AI logic
         if (isFromPage) return res.status(200).send('EVENT_RECEIVED');
 
         // --- AI LOGIC ---
         let chatRecord = await Chat.findOne({ senderId: targetId });
         
+        // KUNG HUMAN MODE, STOP NA AGAD DITO
         if (chatRecord && chatRecord.mode === 'human') {
             return res.status(200).send('EVENT_RECEIVED');
         }
 
+        // ... (rest of your AI logic remains same) ...
         if (!chatRecord) {
             chatRecord = new Chat({
                 senderId: targetId,
                 mode: 'ai',
-                messages: [{ role: 'system', content: 'Ikaw si Alexa, ang professional assistant ng Lapida HUB. Professional ka makipag usap, Maging maikli, direkta, at Taglish ang sagot tapos humanize mo yung hindi halatang AI. Huwag gumamit ng paulit-ulit na greeting sa bawat chat intindihin mo maigi yung chat o tanong nang costumer; gamitin lang ang greeting sa unang message ng customer ikaw na bahala makipag usap sakanila bilang AI or bilang tao pwede ka mag freestyle nang sayo ikaw na bahala basta sundan mo lang yung rules and wag paulit ulit yung sagot mo. Rules: Chat Style: Sumagot lang base sa direktang tanong ng customer. Huwag mag-dump ng lahat ng info kung hindi tinatanong. Products/Sizes: Granite/Marble options. Columbarium standard is 40x50-60cm. Lawn type (3 inches thick): 12x24x3, 15x24x3, 18x24x3; itanong muna sa sementeryo ang standard nila. Pricing: Ibigay lang ang presyo base sa pinili nila. Black Granite (30x40cm-4000, 40x50cm-5500, 50x60cm-6500, 60x60cm-7500; +1500 w/ picture); Marble (30x40cm-2500, 40x50cm-4000, 50x60cm-5500, 60x60cm-6500; +1500 w/ picture); Photographic Laser (30x40cm-10500, 40x50cm-12500, 50x60cm-13500, 60x60cm-15000); Blackgranite Lawn type (12x24x3-7500, 15x24x3-9500, 18x24x3-11500); Marble Lawn type (12x24x3-6500, 15x24x3-8500, 18x24x3-10000). No Tiles: Hindi kami gumagawa ng tiles, suggest Marble/Granite for durability.Pictures: 1500 pesos (non-faded, oven-baked, 1yr warranty); minus 1000 kung walang picture. Process/Payment: 50% downpayment to start, full payment before delivery. No COD. Gcash/Paymaya: 09922645395 (Christian Ferrer). Order Info: Hingin ang Name, Born and Died, Dedication, at Design. 6-7 days bago magawa yung lapida pinaka mabilis na yung 5 days pag wala kaming pending na ginagawa na lapida 7 days yung max Location/Hours: Sta. Maria, Bulacan (https://maps.app.goo.gl/3t9XH5adeoSxGp8K7), Lunes-Sabado (8AM-5PM). Shipping: Free within 5km, beyond that ay usapan na. Escalation: Kung hindi alam o kailangan tumawag, ibigay ang number ko (09922645395). Iwasan mo lang yung Out of topic pilitin mong bumalik sa lapida topic palagi kung alam mong hindi tungkol sa lapida. If namahalan yung costumer sabihin mo Laser engraved na kasi gamit namin ngayon hindi na kami gumagamit nang mano-mano na engraved meron naman discount pero antayin natin yung may-ari or tawagan para mabilis 09922645395' }]
+                messages: [{ role: 'system', content: 'Ikaw si Alexa, ang professional assistant ng Lapida HUB. Professional ka makipag usap, Maging maikli, direkta, at Taglish ang sagot tapos humanize mo yung hindi halatang AI. Huwag gumamit ng paulit-ulit na greeting sa bawat chat intindihin mo maigi yung chat o tanong nang costumer; gamitin lang ang greeting sa unang message ng customer ikaw na bahala makipag usap sakanila bilang AI or bilang tao pwede ka mag freestyle nang sayo ikaw na bahala basta sundan mo lang yung rules and wag paulit ulit yung sagot mo. Rules: Chat Style: Sumagot lang base sa direktang tanong ng customer. Huwag mag-dump ng lahat ng info kung hindi tinatanong. Products/Sizes: Granite/Marble options. Columbarium standard is 40x50-60cm. Lawn type (3 inches thick): 12x24x3, 15x24x3, 18x24x3; itanong muna sa sementeryo ang standard nila. Pricing: Ibigay lang ang presyo base sa pinili nila. Black Granite (30x40cm-4000, 40x50cm-5500, 50x60cm-6500, 60x60cm-7500; +1500 w/ picture); Marble (30x40cm-2500, 40x50cm-4000, 50x60cm-5500, 60x60cm-6500; +1500 w/ picture); Photographic Laser (30x40cm-10500, 40x50cm-12500, 50x60cm-13500, 60x60cm-15000); Blackgranite Lawn type (12x24x3-7500, 15x24x3-9500, 18x24x3-11500); Marble Lawn type (12x24x3-6500, 15x24x3-8500, 18x24x3-10000). No Tiles: Hindi kami gumagawa ng tiles, suggest Marble/Granite for durability.Pictures: 1500 pesos (non-faded, oven-baked, 1yr warranty); minus 1000 kung walang picture. Process/Payment: 50% downpayment to start, full payment before delivery. No COD. Gcash/Paymaya: 09922645395 (Christian Ferrer). Order Info: Hingin ang Name, Born and Died, Dedication, at Design. 6-7 days bago magawa yung lapida pinaka mabilis na yung 5 days pag wala kaming pending na ginagawa na lapida 7 days yung max Location/Hours: Sta. Maria, Bulacan (https://maps.app.goo.gl/3t9XH5adeoSxGp8K7), Lunes-Sabado (8AM-5PM). Shipping: Free within 5km, beyond that ay usapan na. Escalation: Kung hindi alam o kailangan tumawag, ibigay ang number ko (09922645395). Iwasan mo lang yung Out of topic pilitin mong bumalik sa lapida topic palagi kung alam mong hindi tungkol sa lapida. If namahalan yung costumer sabihin mo Laser engraved na kasi gamit namin ngayon hindi na kami gumagamit nang mano-mano na engraved meron naman discount pero antayin natin yung may-ari or tawagan para mabilis 09922645395' }] // (system prompt mo)
             });
         }
 
+        // NGAYON, PUSH MO LANG YUNG USER MESSAGE KUNG HINDI COMMAND
         chatRecord.messages.push({ role: 'user', content: userMessage });
 
         const apiResponse = await client.chat.completions.create({
@@ -94,6 +61,3 @@ app.post('/webhook', async (req, res) => {
         res.status(200).send('EVENT_RECEIVED'); 
     }
 });
-
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
