@@ -13,7 +13,7 @@ mongoose.connect(process.env.MONGODB_URI)
 
 const ChatSchema = new mongoose.Schema({
     senderId: String,
-    mode: { type: String, default: 'ai' }, // DITO: 'ai' o 'human'
+    mode: { type: String, default: 'ai' },
     messages: [{
         role: { type: String, required: true },
         content: { type: String, required: true }
@@ -21,7 +21,6 @@ const ChatSchema = new mongoose.Schema({
 });
 const Chat = mongoose.model('Chat', ChatSchema);
 
-// 2. OpenAI Setup
 const client = new OpenAI({
     baseURL: 'https://models.inference.ai.azure.com',
     apiKey: process.env.OPENAI_API_KEY,
@@ -36,33 +35,37 @@ app.get('/webhook', (req, res) => {
 
 app.post('/webhook', async (req, res) => {
     try {
-        const entry = req.body.entry[0];
-        const messaging = entry.messaging[0];
-        const senderId = messaging.sender.id;
-        const userMessage = messaging.message.text;
+        const messaging = req.body.entry[0].messaging[0];
+        
+        // DITO ANG FIX: Tinutukoy natin kung sino ang customer
+        const isFromPage = messaging.sender.id === process.env.PAGE_ID;
+        const targetId = isFromPage ? messaging.recipient.id : messaging.sender.id;
+        const userMessage = messaging.message.text || "";
 
-        let chatRecord = await Chat.findOne({ senderId });
-
-        // --- COMMAND LOGIC ---
+        // --- COMMAND LOGIC (Dito natin ginagamit ang targetId) ---
         if (userMessage === '!admin') {
-            await Chat.updateOne({ senderId }, { mode: 'human' }, { upsert: true });
+            await Chat.updateOne({ senderId: targetId }, { mode: 'human' }, { upsert: true });
             return res.status(200).send('EVENT_RECEIVED');
         }
 
         if (userMessage === '!ai') {
-            await Chat.updateOne({ senderId }, { mode: 'ai' }, { upsert: true });
+            await Chat.updateOne({ senderId: targetId }, { mode: 'ai' }, { upsert: true });
             return res.status(200).send('EVENT_RECEIVED');
         }
 
-        // Kung naka-human mode, huwag na ituloy ang AI
+        // Kung galing sa Page (ikaw), huwag na ituloy ang AI logic
+        if (isFromPage) return res.status(200).send('EVENT_RECEIVED');
+
+        // --- AI LOGIC ---
+        let chatRecord = await Chat.findOne({ senderId: targetId });
+        
         if (chatRecord && chatRecord.mode === 'human') {
             return res.status(200).send('EVENT_RECEIVED');
         }
 
-        // --- AI LOGIC ---
         if (!chatRecord) {
             chatRecord = new Chat({
-                senderId,
+                senderId: targetId,
                 mode: 'ai',
                 messages: [{ role: 'system', content: 'Ikaw si Alexa, ang professional assistant ng Lapida HUB. Professional ka makipag usap, Maging maikli, direkta, at Taglish ang sagot tapos humanize mo yung hindi halatang AI. Huwag gumamit ng paulit-ulit na greeting sa bawat chat intindihin mo maigi yung chat o tanong nang costumer; gamitin lang ang greeting sa unang message ng customer ikaw na bahala makipag usap sakanila bilang AI or bilang tao pwede ka mag freestyle nang sayo ikaw na bahala basta sundan mo lang yung rules and wag paulit ulit yung sagot mo. Rules: Chat Style: Sumagot lang base sa direktang tanong ng customer. Huwag mag-dump ng lahat ng info kung hindi tinatanong. Products/Sizes: Granite/Marble options. Columbarium standard is 40x50-60cm. Lawn type (3 inches thick): 12x24x3, 15x24x3, 18x24x3; itanong muna sa sementeryo ang standard nila. Pricing: Ibigay lang ang presyo base sa pinili nila. Black Granite (30x40cm-4000, 40x50cm-5500, 50x60cm-6500, 60x60cm-7500; +1500 w/ picture); Marble (30x40cm-2500, 40x50cm-4000, 50x60cm-5500, 60x60cm-6500; +1500 w/ picture); Photographic Laser (30x40cm-10500, 40x50cm-12500, 50x60cm-13500, 60x60cm-15000); Blackgranite Lawn type (12x24x3-7500, 15x24x3-9500, 18x24x3-11500); Marble Lawn type (12x24x3-6500, 15x24x3-8500, 18x24x3-10000). No Tiles: Hindi kami gumagawa ng tiles, suggest Marble/Granite for durability.Pictures: 1500 pesos (non-faded, oven-baked, 1yr warranty); minus 1000 kung walang picture. Process/Payment: 50% downpayment to start, full payment before delivery. No COD. Gcash/Paymaya: 09922645395 (Christian Ferrer). Order Info: Hingin ang Name, Born and Died, Dedication, at Design. 6-7 days bago magawa yung lapida pinaka mabilis na yung 5 days pag wala kaming pending na ginagawa na lapida 7 days yung max Location/Hours: Sta. Maria, Bulacan (https://maps.app.goo.gl/3t9XH5adeoSxGp8K7), Lunes-Sabado (8AM-5PM). Shipping: Free within 5km, beyond that ay usapan na. Escalation: Kung hindi alam o kailangan tumawag, ibigay ang number ko (09922645395). Iwasan mo lang yung Out of topic pilitin mong bumalik sa lapida topic palagi kung alam mong hindi tungkol sa lapida. If namahalan yung costumer sabihin mo Laser engraved na kasi gamit namin ngayon hindi na kami gumagamit nang mano-mano na engraved meron naman discount pero antayin natin yung may-ari or tawagan para mabilis 09922645395' }]
             });
@@ -81,7 +84,7 @@ app.post('/webhook', async (req, res) => {
         await chatRecord.save();
 
         await axios.post(`https://graph.facebook.com/v25.0/me/messages`, {
-            recipient: { id: senderId },
+            recipient: { id: targetId },
             message: { text: aiResponse }
         }, { params: { access_token: process.env.PAGE_ACCESS_TOKEN } });
 
