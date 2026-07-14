@@ -5,7 +5,8 @@
   "dependencies": {
     "express": "^4.17.1",
     "openai": "^4.0.0",
-    "axios": "^1.6.0"
+    "axios": "^1.6.0",
+    "mongoose": "^8.0.0" 
   },
   "scripts": {
     "start": "node index.js"
