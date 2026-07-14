@@ -54,7 +54,7 @@ app.post('/webhook', async (req, res) => {
 
         // Call OpenAI
         const apiResponse = await client.chat.completions.create({
-            model: 'gpt-4o-mini',
+            model: 'gpt-5-nano',
             messages: chatRecord.messages
         });
 
