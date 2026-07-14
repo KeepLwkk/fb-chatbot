@@ -7,7 +7,12 @@ const app = express();
 app.use(express.json());
 
 // 1. Koneksyon sa MongoDB
-mongoose.connect(process.env.MONGODB_URI);
+mongoose.connect(process.env.MONGODB_URI, {
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+})
+.then(() => console.log('Connected to MongoDB'))
+.catch(err => console.error('MongoDB Connection Error:', err));
 
 const ChatSchema = new mongoose.Schema({
     senderId: String,
