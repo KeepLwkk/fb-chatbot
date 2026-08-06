@@ -21,7 +21,6 @@ const ChatSchema = new mongoose.Schema({
 });
 const Chat = mongoose.model('Chat', ChatSchema);
 
-// Gamit ang Gemini API key mula sa Google AI Studio
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const systemInstruction = `Ikaw si Alexa, ang dedikadong professional assistant ng Lapida HUB. Ang trabaho mo ay sumagot sa mga inquiries tungkol sa lapida at memorial services. Etong mga rules mo: 
@@ -48,14 +47,14 @@ app.post('/webhook', async (req, res) => {
         const entry = req.body.entry[0];
         const messaging = entry.messaging[0];
         const senderId = messaging.sender.id;
-
+        
         if (!messaging.message || !messaging.message.text) {
             return res.status(200).send('EVENT_RECEIVED');
         }
         const userMessage = messaging.message.text;
 
         let chatRecord = await Chat.findOne({ senderId });
-
+        
         if (!chatRecord) {
             chatRecord = new Chat({
                 senderId,
@@ -70,7 +69,6 @@ app.post('/webhook', async (req, res) => {
 
         chatRecord.messages.push({ role: 'user', content: userMessage });
 
-        // I-format ang history para sa Gemini API
         const contents = chatRecord.messages.map(msg => ({
             role: msg.role === 'assistant' ? 'model' : 'user',
             parts: [{ text: msg.content }]
@@ -88,7 +86,7 @@ app.post('/webhook', async (req, res) => {
         const aiResponse = apiResponse.text;
 
         chatRecord.messages.push({ role: 'assistant', content: aiResponse });
-        chatRecord.replyCount += 1;
+        chatRecord.replyCount += 1; 
         await chatRecord.save();
 
         await axios.post(`https://graph.facebook.com/v25.0/me/messages`, {
@@ -99,7 +97,7 @@ app.post('/webhook', async (req, res) => {
         res.status(200).send('EVENT_RECEIVED');
     } catch (err) {
         console.error('Error sa Webhook:', err);
-        res.status(200).send('EVENT_RECEIVED');
+        res.status(200).send('EVENT_RECEIVED'); 
     }
 });
 
