@@ -75,7 +75,7 @@ app.post('/webhook', async (req, res) => {
         }));
 
         const apiResponse = await ai.models.generateContent({
-            model: 'gemini-3.6-flash',
+            model: 'gemini-3.5-flash-lite',
             contents: contents,
             config: {
                 systemInstruction: systemInstruction,
