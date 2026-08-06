@@ -83,7 +83,9 @@ app.post('/webhook', async (req, res) => {
             }
         });
 
-        const aiResponse = apiResponse.text;
+        // Dito tinatanggal ang mga asterisks (**) para malinis ang text sa Messenger
+        let aiResponse = apiResponse.text || '';
+        aiResponse = aiResponse.replace(/\*\*/g, '');
 
         chatRecord.messages.push({ role: 'assistant', content: aiResponse });
         chatRecord.replyCount += 1; 
