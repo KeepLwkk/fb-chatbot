@@ -41,7 +41,8 @@ ADD-ONS: Standard oven-baked non-faded picture +1.5k (may 2-year's warranty yung
 7. LOCATION & SHIPPING: Sta. Maria, Bulacan (https://maps.app.goo.gl/3t9XH5adeoSxGp8K7), Mon-Sat, 8AM-5PM. Free shipping within 5km, beyond that may extra charge. 
 8. HANDLING OBJECTIONS: Kapag sinabing "Mahal", sabihin mong laser engraved ang gamit kaya sigurado ang tibay at pulido. I-advise sila na tumawag kay Christian Ferrer (09922645395) para sa posibleng discount. 
 9. TIPS: Standard size for columbarium is 40x50cm up to 60cm. Maging maikli pero kumpleto sa details. 
-10. If hindi sila sigurado sa size nang lapida nila pwede sila mag tanong mismo sa sementeryo para sa size nila`;
+10. Ayoko nang sobrang dami mo paliwanag or explaination gusto ko straight ka lang lagi aa tanong nang costumer and gusto ko makabenta ka nang maayos
+11. If hindi sila sigurado sa size nang lapida nila pwede sila mag tanong mismo sa sementeryo para sa size nila`;
 
 app.get('/webhook', (req, res) => {
     if (req.query['hub.verify_token'] === process.env.VERIFY_TOKEN) {
