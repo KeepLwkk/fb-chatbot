@@ -1,3 +1,4 @@
+
 const express = require('express');
 const { GoogleGenAI } = require('@google/genai');
 const axios = require('axios');
@@ -5,6 +6,9 @@ const mongoose = require('mongoose');
 
 const app = express();
 app.use(express.json());
+
+// Helper function para sa delay (sleep)
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // 1. Koneksyon sa MongoDB
 mongoose.connect(process.env.MONGODB_URI)
@@ -44,6 +48,8 @@ ADD-ONS: Standard oven-baked non-faded picture +1.5k (may 2-year's warranty yung
 10. Ayoko nang sobrang dami mo paliwanag or explaination gusto ko straight ka lang lagi aa tanong nang costumer and gusto ko makabenta ka nang maayos ayoko nang sobrang paligoy ligoy ang goal natin ay makabenta. ibigay mo palagi number ko sa huling chat mo tawagan kamo nila ako 09922645395
 11. If hindi sila sigurado sa size nang lapida nila pwede sila mag tanong mismo sa sementeryo para sa size nila`;
 
+const processedMessages = new Set();
+
 app.get('/webhook', (req, res) => {
     if (req.query['hub.verify_token'] === process.env.VERIFY_TOKEN) {
         return res.status(200).send(req.query['hub.challenge']);
@@ -53,14 +59,26 @@ app.get('/webhook', (req, res) => {
 
 app.post('/webhook', async (req, res) => {
     try {
-        const entry = req.body.entry[0];
-        const messaging = entry.messaging[0];
-        const senderId = messaging.sender.id;
-        
-        if (!messaging.message || !messaging.message.text) {
+        const entry = req.body?.entry?.[0];
+        const messaging = entry?.messaging?.[0];
+
+        if (!messaging || !messaging.message || !messaging.message.text || messaging.message.is_echo) {
             return res.status(200).send('EVENT_RECEIVED');
         }
+
+        const messageId = messaging.message.mid;
+        const senderId = messaging.sender.id;
         const userMessage = messaging.message.text;
+
+        if (processedMessages.has(messageId)) {
+            return res.status(200).send('EVENT_RECEIVED');
+        }
+        processedMessages.add(messageId);
+
+        setTimeout(() => processedMessages.delete(messageId), 600000);
+
+        // Responde agad sa Facebook para maiwasan ang retries
+        res.status(200).send('EVENT_RECEIVED');
 
         let chatRecord = await Chat.findOne({ senderId });
         
@@ -73,7 +91,7 @@ app.post('/webhook', async (req, res) => {
         }
 
         if (chatRecord.replyCount >= 3) {
-            return res.status(200).send('EVENT_RECEIVED');
+            return;
         }
 
         chatRecord.messages.push({ role: 'user', content: userMessage });
@@ -92,7 +110,6 @@ app.post('/webhook', async (req, res) => {
             }
         });
 
-        // Dito tinatanggal ang mga asterisks (**) para malinis ang text sa Messenger
         let aiResponse = apiResponse.text || '';
         aiResponse = aiResponse.replace(/\*\*/g, '');
 
@@ -100,17 +117,23 @@ app.post('/webhook', async (req, res) => {
         chatRecord.replyCount += 1; 
         await chatRecord.save();
 
+        // MAGHIHINTAY NG 5 SECONDS BAGO IPADALA ANG CHAT SA MESSENGER
+        await sleep(5000);
+
         await axios.post(`https://graph.facebook.com/v25.0/me/messages`, {
             recipient: { id: senderId },
             message: { text: aiResponse }
         }, { params: { access_token: process.env.PAGE_ACCESS_TOKEN } });
 
-        res.status(200).send('EVENT_RECEIVED');
     } catch (err) {
         console.error('Error sa Webhook:', err);
-        res.status(200).send('EVENT_RECEIVED'); 
+        if (!res.headersSent) {
+            res.status(200).send('EVENT_RECEIVED');
+        }
     }
 });
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+```
