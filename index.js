@@ -1,8 +1,8 @@
 
-const express = require('express');
-const { GoogleGenAI } = require('@google/genai');
-const axios = require('axios');
-const mongoose = require('mongoose');
+cons express = require('express');
+cons { GoogleGenAI } = require('@google/genai');
+cons axios = require('axios');
+cons mongoose = require('mongoose');
 
 const app = express();
 app.use(express.json());
