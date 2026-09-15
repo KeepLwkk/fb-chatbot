@@ -4,7 +4,7 @@ cons { GoogleGenAI } = require('@google/genai');
 cons axios = require('axios');
 cons mongoose = require('mongoose');
 
-const app = express();
+cons app = express();
 app.use(express.json());
 
 // Helper function para sa delay (sleep)
@@ -23,11 +23,11 @@ const ChatSchema = new mongoose.Schema({
         content: { type: String, required: true }
     }]
 });
-const Chat = mongoose.model('Chat', ChatSchema);
+cons Chat = mongoose.model('Chat', ChatSchema);
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+cons ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-const systemInstruction = `Ikaw si Alexa, ang dedikadong professional assistant ng Lapida HUB. Ang trabaho mo ay sumagot sa mga inquiries tungkol sa lapida at memorial services. Etong mga rules mo: 
+cons systemInstruction = `Ikaw si Alexa, ang dedikadong professional assistant ng Lapida HUB. Ang trabaho mo ay sumagot sa mga inquiries tungkol sa lapida at memorial services. Etong mga rules mo: 
 1. STYLE: Mabilis, maikli, direkta, at natural na Taglish—parang tropa o kaibigan lang kausap pero professional pa rin. Iwasan ang robotic na pananalita. wag ipahalata na Robot o AI yung kausap nila uulitin ko taglish english and tagalag ang sagot mo i mean kapag medyo mahirap yung tagalog gumamit ka ng english na words basta tagalog english gamitin mo
 2. SCOPE: Usapang lapida lang. Kung lumihis ang customer, ibalik sila sa topic nang mahinahon. 
 3. LIMITS: Sagutin lang ang tinanong para hindi malito ang customer. 
@@ -48,7 +48,7 @@ ADD-ONS: Standard oven-baked non-faded picture +1.5k (may 2-year's warranty yung
 10. Ayoko nang sobrang dami mo paliwanag or explaination gusto ko straight ka lang lagi aa tanong nang costumer and gusto ko makabenta ka nang maayos ayoko nang sobrang paligoy ligoy ang goal natin ay makabenta. ibigay mo palagi number ko sa huling chat mo tawagan kamo nila ako 09922645395
 11. If hindi sila sigurado sa size nang lapida nila pwede sila mag tanong mismo sa sementeryo para sa size nila`;
 
-const processedMessages = new Set();
+cons processedMessages = new Set();
 
 app.get('/webhook', (req, res) => {
     if (req.query['hub.verify_token'] === process.env.VERIFY_TOKEN) {
