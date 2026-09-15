@@ -7,10 +7,10 @@ cons mongoose = require('mongoose');
 cons app = express();
 app.use(express.json());
 
-// Helper function para sa delay (sleep)
+
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// 1. Koneksyon sa MongoDB
+
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('Connected to MongoDB'))
     .catch(err => console.error('MongoDB Connection Error:', err));
